@@ -44,14 +44,16 @@ int main() {
         -0.5f,  0.5f,  0.0f, 
         0.5f, 0.5f,  0.0f,
         0.5f, -0.5f,  0.0f,
-
-        -0.5f, 0.5f, 0.0f,
-        0.5f, -0.5f, 0.0f,
         -0.5f, -0.5f, 0.0f
     };
 
+    GLuint indicies[] = {
+        0, 1, 2, // triangle 2
+        0, 2, 3 // triangle 1
+    };
+
     // video buffer object and video array object
-    GLuint vbo, vao; 
+    GLuint vbo, ibo, vao; 
 
     // get an address on the video card buffer and assign to vbo
     glGenBuffers(1, &vbo);
@@ -67,6 +69,11 @@ int main() {
     // first parameter where vertextShaderSrc (location = 0)
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
     glEnableVertexAttribArray(0);
+
+    // will allow us to call position by indicies, and saving space used for indicies
+    glGenBuffers(1, &ibo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicies), indicies, GL_STATIC_DRAW);
 
     // vertex shader
     GLuint vs = glCreateShader(GL_VERTEX_SHADER);
@@ -118,7 +125,7 @@ int main() {
 
         glUseProgram(shaderProgram);
         glBindVertexArray(vao);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); // allows us to draw by using indicies
         glBindVertexArray(0);
 
         // two buffers 
@@ -131,6 +138,7 @@ int main() {
     glDeleteProgram(shaderProgram);
     glDeleteVertexArrays(1, &vao);
     glDeleteBuffers(1, &vbo);
+    glDeleteBuffers(1, &ibo);
 
     glfwTerminate();
     return 0;
