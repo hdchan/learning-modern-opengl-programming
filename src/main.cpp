@@ -6,27 +6,15 @@ using namespace std;
 #include "GL/glew.h"
 #include "GLFW/glfw3.h"
 
-const char* APP_TITLE = "Introduction to Modern OpenGL - Hello Triangle";
+#include "ShaderProgram.h"
+
+
+const char* APP_TITLE = "Introduction to Modern OpenGL - Hello Shader";
 const int gWindowWidth = 800;
 const int gWindowHeight = 600;
 GLFWwindow* gWindow = NULL;
 bool gWireframe = false;
 
-const GLchar* vertextShaderSrc =
-"#version 330 core\n"
-"layout (location = 0) in vec3 pos;"
-"void main()"
-"{"
-"   gl_Position = vec4(pos.x, pos.y, pos.z, 1.0);"
-"}";
-
-const GLchar* fragmentShaderSrc =
-"#version 330 core\n"
-"out vec4 frag_color;"
-"void main()"
-"{"
-"   frag_color = vec4(0.35f, 0.96f, 0.3f, 1.0f);"
-"}";
 
 // function prototypes
 void glfw_onKey(GLFWwindow* window, int key, int scancode, int action, int mode);
@@ -34,6 +22,7 @@ void showFPS(GLFWwindow* window);
 bool initOpenGL();
 
 int main() {
+
     if (!initOpenGL()) {
         cerr << "GLFW initialization failed" << endl;
         return -1;
@@ -75,43 +64,10 @@ int main() {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicies), indicies, GL_STATIC_DRAW);
 
-    // vertex shader
-    GLuint vs = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vs, 1, &vertextShaderSrc, NULL);
-    glCompileShader(vs);
+    ShaderProgram shaderProgram;
+    shaderProgram.loadShaders("basic.vert", "basic.frag");
 
-    GLint result;
-    GLchar infoLog[512];
-    glGetShaderiv(vs, GL_COMPILE_STATUS, &result);
-    if (!result) {
-        glGetShaderInfoLog(vs, sizeof(infoLog), NULL, infoLog);
-        cout << "Error! Vertex shader failed to compile." << infoLog << endl;
-    }
 
-    // fragment shader
-    GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fs, 1, &fragmentShaderSrc, NULL);
-    glCompileShader(fs);
-
-    glGetShaderiv(fs, GL_COMPILE_STATUS, &result);
-    if (!result) {
-        glGetShaderInfoLog(fs, sizeof(infoLog), NULL, infoLog);
-        cout << "Error! Fragment shader failed to compile." << infoLog << endl;
-    }
-
-    GLuint shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vs);
-    glAttachShader(shaderProgram, fs);
-    glLinkProgram(shaderProgram);
-
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &result);
-    if (!result) {
-        glGetProgramInfoLog(shaderProgram, sizeof(infoLog), NULL, infoLog);
-        cout << "Error! Shader Program linker failure " << infoLog << endl;
-    }
-
-    glDeleteShader(vs);
-    glDeleteShader(fs);
 
     // main loop
     while (!glfwWindowShouldClose(gWindow)) {
@@ -123,7 +79,22 @@ int main() {
 
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glUseProgram(shaderProgram);
+
+        shaderProgram.use();
+
+        GLfloat time = glfwGetTime();
+        GLfloat blueColor = (sin(time) / 2) + 0.5f;
+
+        glm::vec2 pos;
+        pos.x = sin(time) / 2;
+        pos.y = cos(time) / 2;
+
+        shaderProgram.setUniform("posOffset", pos);
+
+        // call this after we "use" the program
+        // set uniform only works after the program works
+        shaderProgram.setUniform("vertColor", glm::vec4(0.0f, 0.0f, blueColor, 1.0f));
+
         glBindVertexArray(vao);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); // allows us to draw by using indicies
         glBindVertexArray(0);
@@ -135,7 +106,7 @@ int main() {
         glfwSwapBuffers(gWindow);
     }
 
-    glDeleteProgram(shaderProgram);
+
     glDeleteVertexArrays(1, &vao);
     glDeleteBuffers(1, &vbo);
     glDeleteBuffers(1, &ibo);
@@ -145,7 +116,7 @@ int main() {
 }
 
 bool initOpenGL() {
-    !glewInit();
+
     if (!glfwInit()) {
         cerr << "GLFW initialization failed" << endl;
         return false;
