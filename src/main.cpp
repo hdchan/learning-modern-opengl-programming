@@ -5,20 +5,22 @@ using namespace std;
 #define GLEW_STATIC
 #include "GL/glew.h"
 #include "GLFW/glfw3.h"
+#include "glm/gtc/matrix_transform.hpp"
 
 #include "ShaderProgram.h"
 #include "Texture2D.h"
 
 const char* APP_TITLE = "Introduction to Modern OpenGL - Hello Shader";
-const int gWindowWidth = 800;
-const int gWindowHeight = 600;
+int gWindowWidth = 1024;
+int gWindowHeight = 768;
 GLFWwindow* gWindow = NULL;
 bool gWireframe = false;
-const std::string texture1Filename = "airplane.jpg";
-const std::string texture2Filename = "crate.jpg";
+const std::string texture1Filename = "crate.jpg";
+// const std::string texture2Filename = "crate.jpg";
 
 // function prototypes
 void glfw_onKey(GLFWwindow* window, int key, int scancode, int action, int mode);
+void glfw_OnFrameBufferSize(GLFWwindow* window, int width, int height);
 void showFPS(GLFWwindow* window);
 bool initOpenGL();
 
@@ -30,20 +32,51 @@ int main() {
     }
 
     GLfloat verticies[] = {
-        // position (x, y, z)   // tex coords
-        -0.5f,  0.5f,  0.0f,    0.0f, 1.0f, // top left
-         0.5f,  0.5f,  0.0f,    1.0f, 1.0f, // top right
-         0.5f, -0.5f,  0.0f,    1.0f, 0.0f, // bottom right
-        -0.5f, -0.5f,  0.0f,    0.0f, 0.0f // bottom left
-    };
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+         0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
 
-    GLuint indicies[] = {
-        0, 1, 2, // triangle 2
-        0, 2, 3 // triangle 1
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
     };
 
     // video buffer object and video array object
-    GLuint vbo, ibo, vao; 
+    GLuint vbo, vao; 
 
     // get an address on the video card buffer and assign to vbo
     glGenBuffers(1, &vbo);
@@ -64,40 +97,56 @@ int main() {
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
     glEnableVertexAttribArray(1);
 
-    // will allow us to call position by indicies, and saving space used for indicies
-    glGenBuffers(1, &ibo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicies), indicies, GL_STATIC_DRAW);
-
     ShaderProgram shaderProgram;
     shaderProgram.loadShaders("basic.vert", "basic.frag");
 
     Texture2D texture1;
     texture1.loadTexture(texture1Filename, true);
 
-    Texture2D texture2;
-    texture2.loadTexture(texture2Filename, true);
+    //Texture2D texture2;
+    //texture2.loadTexture(texture2Filename, true);
+
+    // rotate cube, to look at it in an angle
+    float cubeAngle = 0.0f;
+    double lastTime = glfwGetTime();
 
     // main loop
     while (!glfwWindowShouldClose(gWindow)) {
         showFPS(gWindow);
+
+        double currentTime = glfwGetTime();
+        double deltaTime = currentTime = currentTime - lastTime;
+
         // polls for input events
         // callback funtions
         glfwPollEvents();
 
-
-        glClear(GL_COLOR_BUFFER_BIT);
+        // clear color and depth buffer every frame
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         texture1.bind(0);
-        texture2.bind(1);
+        //texture2.bind(1);
 
         shaderProgram.use();
 
-        glUniform1i(glGetUniformLocation(shaderProgram.getProgram(), "myTexture1"), 0);
-        glUniform1i(glGetUniformLocation(shaderProgram.getProgram(), "myTexture2"), 1);
+
+        // create transformations
+        glm::mat4 model = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+        glm::mat4 view = glm::mat4(1.0f);
+        glm::mat4 projection = glm::mat4(1.0f);
+        model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.5f, 1.0f, 0.0f));
+        view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+        projection = glm::perspective(glm::radians(45.0f), (float)gWindowWidth / (float)gWindowHeight, 0.1f, 100.0f);
+        // retrieve the matrix uniform locations
+
+        // note: currently we set the projection matrix each frame, but since the projection matrix rarely changes it's often best practice to set it outside the main loop only once.
+        shaderProgram.setUniform("model", model);
+        shaderProgram.setUniform("view", view);
+        shaderProgram.setUniform("projection", projection);
+
 
         glBindVertexArray(vao);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); // allows us to draw by using indicies
+        glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);
 
         // two buffers 
@@ -105,12 +154,13 @@ int main() {
         // 2) back buffer where we are drawing
         // removes flicker/tearing
         glfwSwapBuffers(gWindow);
+
+        lastTime = currentTime;
     }
 
 
     glDeleteVertexArrays(1, &vao);
     glDeleteBuffers(1, &vbo);
-    glDeleteBuffers(1, &ibo);
 
     glfwTerminate();
     return 0;
@@ -136,6 +186,7 @@ bool initOpenGL() {
     }
 
     glfwMakeContextCurrent(gWindow);
+    glfwSetFramebufferSizeCallback(gWindow, glfw_OnFrameBufferSize);
 
     glfwSetKeyCallback(gWindow, glfw_onKey);
 
@@ -146,6 +197,10 @@ bool initOpenGL() {
     }
 
     glClearColor(0.23f, 0.38f, 0.47f, 1.0f);
+    glViewport(0, 0, gWindowWidth, gWindowHeight);
+    // allows the shaders to draw the ones behind last
+    glEnable(GL_DEPTH_TEST);
+
 
     return true;
 }
@@ -165,6 +220,12 @@ void glfw_onKey(GLFWwindow* window, int key, int scancode, int action, int mode)
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         }
     }
+}
+
+void glfw_OnFrameBufferSize(GLFWwindow* window, int width, int height) {
+    gWindowWidth = width;
+    gWindowHeight = height;
+    glViewport(0, 0, gWindowWidth, gWindowHeight);
 }
 
 void showFPS(GLFWwindow* window) {
