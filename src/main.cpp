@@ -7,14 +7,14 @@ using namespace std;
 #include "GLFW/glfw3.h"
 
 #include "ShaderProgram.h"
-
+#include "Texture2D.h"
 
 const char* APP_TITLE = "Introduction to Modern OpenGL - Hello Shader";
 const int gWindowWidth = 800;
 const int gWindowHeight = 600;
 GLFWwindow* gWindow = NULL;
 bool gWireframe = false;
-
+const std::string texture1 = "crate.jpg";
 
 // function prototypes
 void glfw_onKey(GLFWwindow* window, int key, int scancode, int action, int mode);
@@ -29,11 +29,11 @@ int main() {
     }
 
     GLfloat verticies[] = {
-        // position (x, y, z)   
-        -0.5f,  0.5f,  0.0f, 
-        0.5f, 0.5f,  0.0f,
-        0.5f, -0.5f,  0.0f,
-        -0.5f, -0.5f, 0.0f
+        // position (x, y, z)   // tex coords
+        -0.5f,  0.5f,  0.0f,    0.0f, 1.0f, // top left
+         0.5f,  0.5f,  0.0f,    1.0f, 1.0f, // top right
+         0.5f, -0.5f,  0.0f,    1.0f, 0.0f, // bottom right
+        -0.5f, -0.5f,  0.0f,    0.0f, 0.0f // bottom left
     };
 
     GLuint indicies[] = {
@@ -56,8 +56,12 @@ int main() {
     // position attributes
     // Tells the layout of our verticies array
     // first parameter where vertextShaderSrc (location = 0)
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), NULL);
     glEnableVertexAttribArray(0);
+
+    // text coord
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+    glEnableVertexAttribArray(1);
 
     // will allow us to call position by indicies, and saving space used for indicies
     glGenBuffers(1, &ibo);
@@ -67,7 +71,8 @@ int main() {
     ShaderProgram shaderProgram;
     shaderProgram.loadShaders("basic.vert", "basic.frag");
 
-
+    Texture2D texture;
+    texture.loadTexture(texture1, true);
 
     // main loop
     while (!glfwWindowShouldClose(gWindow)) {
@@ -79,21 +84,9 @@ int main() {
 
         glClear(GL_COLOR_BUFFER_BIT);
 
+        texture.bind();
 
         shaderProgram.use();
-
-        GLfloat time = glfwGetTime();
-        GLfloat blueColor = (sin(time) / 2) + 0.5f;
-
-        glm::vec2 pos;
-        pos.x = sin(time) / 2;
-        pos.y = cos(time) / 2;
-
-        shaderProgram.setUniform("posOffset", pos);
-
-        // call this after we "use" the program
-        // set uniform only works after the program works
-        shaderProgram.setUniform("vertColor", glm::vec4(0.0f, 0.0f, blueColor, 1.0f));
 
         glBindVertexArray(vao);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); // allows us to draw by using indicies
