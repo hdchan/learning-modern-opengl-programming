@@ -21,6 +21,24 @@ bool Texture2D::loadTexture(const string& filename, bool generateMipMaps) {
         return false;
     }
 
+    // invert image
+    int widthInBytes = width * 4;
+    unsigned char* top = NULL;
+    unsigned char* bottom = NULL;
+    unsigned char temp = 0;
+    int halfHeight = height / 2;
+    for (int row = 0; row < halfHeight; row++) {
+        top = imageData + row * widthInBytes;
+        bottom = imageData + (height - row - 1) * widthInBytes;
+        for (int col = 0; col < widthInBytes; col++) {
+            temp = *top;
+            *top = *bottom;
+            *bottom = temp;
+            top++;
+            bottom++;
+        }
+    }
+
     // create "1" texture, and pass it back to our variable
     glGenTextures(1, &mTexture);
     // sets context for future calls
@@ -45,6 +63,7 @@ bool Texture2D::loadTexture(const string& filename, bool generateMipMaps) {
 }
 
 void Texture2D::bind(GLuint texUnit) {
-    glEnable(GL_TEXTURE_2D);
+    //glEnable(GL_TEXTURE_2D);
+    glActiveTexture(GL_TEXTURE0 + texUnit);
     glBindTexture(GL_TEXTURE_2D, mTexture);
 }

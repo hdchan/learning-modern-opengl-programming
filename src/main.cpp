@@ -14,7 +14,8 @@ const int gWindowWidth = 800;
 const int gWindowHeight = 600;
 GLFWwindow* gWindow = NULL;
 bool gWireframe = false;
-const std::string texture1 = "crate.jpg";
+const std::string texture1Filename = "airplane.jpg";
+const std::string texture2Filename = "crate.jpg";
 
 // function prototypes
 void glfw_onKey(GLFWwindow* window, int key, int scancode, int action, int mode);
@@ -57,7 +58,7 @@ int main() {
     // Tells the layout of our verticies array
     // first parameter where vertextShaderSrc (location = 0)
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), NULL);
-    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(0); // enables our poitner
 
     // text coord
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
@@ -71,8 +72,11 @@ int main() {
     ShaderProgram shaderProgram;
     shaderProgram.loadShaders("basic.vert", "basic.frag");
 
-    Texture2D texture;
-    texture.loadTexture(texture1, true);
+    Texture2D texture1;
+    texture1.loadTexture(texture1Filename, true);
+
+    Texture2D texture2;
+    texture2.loadTexture(texture2Filename, true);
 
     // main loop
     while (!glfwWindowShouldClose(gWindow)) {
@@ -84,9 +88,13 @@ int main() {
 
         glClear(GL_COLOR_BUFFER_BIT);
 
-        texture.bind();
+        texture1.bind(0);
+        texture2.bind(1);
 
         shaderProgram.use();
+
+        glUniform1i(glGetUniformLocation(shaderProgram.getProgram(), "myTexture1"), 0);
+        glUniform1i(glGetUniformLocation(shaderProgram.getProgram(), "myTexture2"), 1);
 
         glBindVertexArray(vao);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); // allows us to draw by using indicies
