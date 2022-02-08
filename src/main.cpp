@@ -9,6 +9,7 @@ using namespace std;
 
 #include "ShaderProgram.h"
 #include "Texture2D.h"
+#include "Camera.h"
 
 const char* APP_TITLE = "Introduction to Modern OpenGL - Hello Shader";
 int gWindowWidth = 1024;
@@ -16,11 +17,18 @@ int gWindowHeight = 768;
 GLFWwindow* gWindow = NULL;
 bool gWireframe = false;
 const std::string texture1Filename = "crate.jpg";
-// const std::string texture2Filename = "crate.jpg";
+
+OrbitCamera orbitCamera;
+float gYaw = 0.0f;
+float gPitch = 0.0f;
+float gRadius = 10.0f;
+const float MOUSE_SENSITIVITY = 0.5f;
 
 // function prototypes
 void glfw_onKey(GLFWwindow* window, int key, int scancode, int action, int mode);
 void glfw_OnFrameBufferSize(GLFWwindow* window, int width, int height);
+void glfw_OnMouseMove(GLFWwindow* window, double posX, double posY);
+void glfw_OnMouseScroll(GLFWwindow* window, double xoffset, double yoffset);
 void showFPS(GLFWwindow* window);
 bool initOpenGL();
 
@@ -103,9 +111,6 @@ int main() {
     Texture2D texture1;
     texture1.loadTexture(texture1Filename, true);
 
-    //Texture2D texture2;
-    //texture2.loadTexture(texture2Filename, true);
-
     // rotate cube, to look at it in an angle
     float cubeAngle = 0.0f;
     double lastTime = glfwGetTime();
@@ -125,20 +130,26 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         texture1.bind(0);
-        //texture2.bind(1);
+
+        glm::vec3 cubePos = glm::vec3(0.0f, 0.0f, -5.0f);
+        // create transformations
+        glm::mat4 model, view, projection;
+        model = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+
+        model = glm::translate(model, cubePos);
+
+        orbitCamera.setLookAt(cubePos);
+        orbitCamera.rotate(gYaw, gPitch);
+        orbitCamera.setRadius(gRadius);
+
+        //view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+        view = orbitCamera.getViewMatrix();
+
+        projection = glm::perspective(glm::radians(45.0f), (float)gWindowWidth / (float)gWindowHeight, 0.1f, 100.0f);
 
         shaderProgram.use();
 
-
-        // create transformations
-        glm::mat4 model = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-        glm::mat4 view = glm::mat4(1.0f);
-        glm::mat4 projection = glm::mat4(1.0f);
-        model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.5f, 1.0f, 0.0f));
-        view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
-        projection = glm::perspective(glm::radians(45.0f), (float)gWindowWidth / (float)gWindowHeight, 0.1f, 100.0f);
         // retrieve the matrix uniform locations
-
         // note: currently we set the projection matrix each frame, but since the projection matrix rarely changes it's often best practice to set it outside the main loop only once.
         shaderProgram.setUniform("model", model);
         shaderProgram.setUniform("view", view);
@@ -189,6 +200,8 @@ bool initOpenGL() {
     glfwSetFramebufferSizeCallback(gWindow, glfw_OnFrameBufferSize);
 
     glfwSetKeyCallback(gWindow, glfw_onKey);
+    glfwSetCursorPosCallback(gWindow, glfw_OnMouseMove);
+    glfwSetScrollCallback(gWindow, glfw_OnMouseScroll);
 
     glewExperimental = GL_TRUE;
     if (glewInit() != GLEW_OK) {
@@ -226,6 +239,28 @@ void glfw_OnFrameBufferSize(GLFWwindow* window, int width, int height) {
     gWindowWidth = width;
     gWindowHeight = height;
     glViewport(0, 0, gWindowWidth, gWindowHeight);
+}
+
+void glfw_OnMouseMove(GLFWwindow* window, double posX, double posY) {
+    static glm::vec2 lastMousePos = glm::vec2(0, 0);
+
+    if (glfwGetMouseButton(gWindow, GLFW_MOUSE_BUTTON_LEFT) == 1) {
+        gYaw -= ((float)posX - lastMousePos.x) * MOUSE_SENSITIVITY;
+        gPitch += ((float)posY - lastMousePos.y) * MOUSE_SENSITIVITY;
+    }
+
+    if (glfwGetMouseButton(gWindow, GLFW_MOUSE_BUTTON_RIGHT) == 1) {
+        float dx = 0.01f * ((float)posX - lastMousePos.x);
+        float dy = 0.01f * ((float)posY - lastMousePos.y);
+        gRadius += dx - dy;
+    }
+
+    lastMousePos.x = (float)posX;
+    lastMousePos.y = (float)posY;
+}
+
+void glfw_OnMouseScroll(GLFWwindow* window, double xoffset, double yoffset) {
+    gRadius += yoffset;
 }
 
 void showFPS(GLFWwindow* window) {
